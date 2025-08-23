@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Time Tracker Mo</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; text-align: center; }
+    input, select, button { margin: 0.5rem; padding: 0.5rem; font-size: 1rem; }
+    #status { margin-top: 1rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>⏱ Simple Time Tracker</h2>
+
+  <div>
+    <label>Webhook URL:</label><br>
+    <input id="webhook" type="text" size="70"
+      placeholder="Plak hier je Google Apps Script URL"
+      value="https://script.google.com/a/macros/alphaleporis.nl/s/AKfycbzXuNVIvFd9l4q9v8irfZmzmJr0v0wYJOD-A6aFvv5xDyhPLFl1y7mmVckQVb8gMBvg/exec" />
+  </div>
+
+  <div>
+    <label>Project:</label>
+    <select id="project">
+      <option value="Airbnb">Airbnb</option>
+      <option value="Uitgeverij">Uitgeverij</option>
+      <option value="Online Shops">Online Shops</option>
+    </select>
+  </div>
+
+  <div>
+    <label>Note (optioneel):</label><br>
+    <input id="note" type="text" size="50" placeholder="Korte notitie" />
+  </div>
+
+  <div>
+    <button onclick="startTimer()">▶ Start</button>
+    <button onclick="stopTimer()">⏹ Stop & Log</button>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    let startTime = null;
+
+    function startTimer() {
+      startTime = new Date();
+      document.getElementById('status').innerText = "⏱ Timer started at " + startTime.toLocaleTimeString();
+    }
+
+    async function stopTimer() {
+      if (!startTime) {
+        document.getElementById('status').innerText = "⚠️ Timer not started!";
+        return;
+      }
+      const endTime = new Date();
+      const durationMin = Math.round((endTime - startTime) / 60000);
+
+      const payload = {
+        start: startTime.toISOString(),
+        end: endTime.toISOString(),
+        duration_min: durationMin,
+        project: document.getElementById('project').value,
+        note: document.getElementById('note').value,
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone
+      };
+
+      try {
+        const resp = await fetch(document.getElementById('webhook').value, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await resp.json();
+        if (result.ok) {
+          document.getElementById('status').innerText =
+            `✅ Logged: ${durationMin} min (${payload.project})`;
+        } else {
+          document.getElementById('status').innerText =
+            "❌ Error: " + (result.error || "unknown");
+        }
+      } catch (err) {
+        document.getElementById('status').innerText = "❌ Network error: " + err;
+      }
+      startTime = null;
+    }
+  </script>
+</body>
+</html>
