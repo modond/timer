@@ -73,7 +73,7 @@
         </div>
         <div>
           <label for="secret">Secret key (optioneel)</label>
-          <input id="secret" placeholder="Alleen als je in Apps Script REQUIRE_SECRET gebruikt" />
+          <input id="secret" placeholder="Gebruik als je REQUIRE_SECRET aanzet" />
         </div>
       </div>
 
@@ -121,8 +121,9 @@
 
   let startTS = null, timerId = null;
 
-  // Restore settings
-  webhookEl.value = localStorage.getItem(LS.webhook) || "";
+  // Default webhook (jouw URL) + restore settings
+  const DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbzXuNVIvFd9l4q9v8irfZmzmJr0v0wYJOD-A6aFvv5xDyhPLFl1y7mmVckQVb8gMBvg/exec";
+  webhookEl.value = localStorage.getItem(LS.webhook) || DEFAULT_WEBHOOK;
   projectEl.value = localStorage.getItem(LS.project) || "Airbnb";
   secretEl.value  = localStorage.getItem(LS.secret)  || "";
 
@@ -137,16 +138,11 @@
     const x = String(s%60).padStart(2,'0');
     return `${h}:${m}:${x}`;
   }
-  function tick(){
-    if(!startTS) return;
-    display.textContent = fmt(Date.now() - startTS);
-  }
+  function tick(){ if(startTS) display.textContent = fmt(Date.now() - startTS); }
 
   function saveRunning(){
     if(startTS){
-      localStorage.setItem(LS.running, JSON.stringify({
-        startTS, project: projectEl.value, note: noteEl.value
-      }));
+      localStorage.setItem(LS.running, JSON.stringify({ startTS, project: projectEl.value, note: noteEl.value }));
     } else {
       localStorage.removeItem(LS.running);
     }
@@ -209,7 +205,7 @@
   stopBtn.addEventListener('click', async ()=>{
     if(!startTS) return;
     const endTS = Date.now();
-    const durationMin = Math.max(1, Math.round((endTS - startTS)/60000)); // minimaal 1 minuut voor nette rapportage
+    const durationMin = Math.max(1, Math.round((endTS - startTS)/60000));
 
     const payload = {
       start: new Date(startTS).toISOString(),
