@@ -1,120 +1,201 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Project Timer</title>
+  <meta name="theme-color" content="#0ea5e9" />
+  <!-- Optioneel, als je ze hebt in de repo -->
+  <link rel="icon" type="image/png" sizes="512x512" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="manifest.json">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      background: #f9f9f9;
-    }
-    h1 {
-      font-size: 1.4rem;
-      margin-bottom: 10px;
-    }
-    select, input, button {
-      margin: 6px 0;
-      padding: 8px;
-      font-size: 1rem;
-      width: 90%;
-      max-width: 300px;
-    }
-    #status {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      color: #333;
-    }
-    .timer-display {
-      font-size: 2rem;
-      font-weight: bold;
-      margin: 12px 0;
-    }
+    :root{--bg:#0b0c0f;--card:#151922;--muted:#96a0b5;--text:#eef2ff;--accent:#0ea5e9;--danger:#ef4444;--ok:#10b981;--border:#1f2430}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#0b0c0f, #0e1320) fixed}
+    .wrap{max-width:640px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:16px}
+    h1{font-size:20px;margin:0 0 10px}
+    label{font-size:13px;color:var(--muted);display:block;margin:8px 0 6px}
+    input,select{width:100%;padding:14px 12px;border-radius:12px;border:1px solid var(--border);background:#0f1420;color:var(--text);font-size:16px}
+    input::placeholder{color:#7a859d}
+    .row{display:grid;gap:12px}
+    .split{grid-template-columns:1fr 1fr}
+    @media (max-width:560px){.split{grid-template-columns:1fr}}
+    .timer{font-variant-numeric:tabular-nums;font-size:48px;text-align:center;letter-spacing:.03em;margin:8px 0 14px}
+    .btns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    button{padding:16px 14px;border-radius:14px;border:1px solid var(--border);font-size:18px;font-weight:600;cursor:pointer}
+    .start{background:linear-gradient(180deg,#16b7ff,#0ea5e9);color:#00131e}
+    .stop{background:linear-gradient(180deg,#ff6b6b,#ef4444);color:#280a0a}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .status{margin-top:10px;font-size:14px;color:var(--muted)}
+    .pill{display:inline-block;padding:4px 8px;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted);margin-right:6px}
+    .ok{color:var(--ok)} .err{color:var(--danger)}
+    .footer{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
   </style>
 </head>
 <body>
-  <h1>⏱ Project Timer</h1>
+  <div class="wrap">
+    <div class="card">
+      <h1>⏱ Project Timer</h1>
 
-  <!-- project selectie -->
-  <select id="project">
-    <option value="Airbnb">Airbnb</option>
-    <option value="Uitgeverij">Uitgeverij</option>
-    <option value="Online Shops">Online Shops</option>
-  </select>
+      <div class="row">
+        <label for="webhook">Webhook URL (Google Apps Script)</label>
+        <input id="webhook" autocomplete="off" />
+      </div>
 
-  <!-- notitieveld -->
-  <input type="text" id="note" placeholder="Notitie (optioneel)" />
+      <div class="row split">
+        <div>
+          <label for="project">Project</label>
+          <select id="project">
+            <option>Airbnb</option>
+            <option>Uitgeverij</option>
+            <option>Online Shops</option>
+          </select>
+        </div>
+        <div>
+          <label for="secret">Secret key (optioneel)</label>
+          <input id="secret" placeholder="Gebruik als REQUIRE_SECRET=true in Apps Script" />
+        </div>
+      </div>
 
-  <!-- timer display -->
-  <div class="timer-display" id="timer">00:00:00</div>
+      <div class="row">
+        <label for="note">Notitie (optioneel)</label>
+        <input id="note" placeholder="bv. pricing update, support-call, posts ingepland…" />
+      </div>
 
-  <!-- knoppen -->
-  <button onclick="startTimer()">▶️ Start</button>
-  <button onclick="stopTimer()">⏹ Stop & Log</button>
+      <div class="timer" id="display">00:00:00</div>
 
-  <div id="status"></div>
+      <div class="btns">
+        <button class="start" id="startBtn">Start</button>
+        <button class="stop" id="stopBtn" disabled>Stop & Log</button>
+      </div>
 
-  <script>
-    // ✅ jouw juiste webhook URL
-    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw17yVcx_OCuDyrZcZ1N9ctVC9y2YP9ZjrWhK94SDHMdILcnnnuMLW5oHXq1i3j9QeY7g/exec";
+      <div class="status" id="status">Klaar.</div>
 
-    let startTime = null;
-    let timerInterval = null;
+      <div class="footer">
+        <span class="pill">Herstelt lopende timer</span>
+        <span class="pill">Offline buffer</span>
+        <span class="pill">Onthoudt instellingen</span>
+      </div>
+    </div>
+  </div>
 
-    function startTimer() {
-      startTime = new Date();
-      document.getElementById("status").innerText = "⏳ Timer gestart...";
-      updateTimer();
-      timerInterval = setInterval(updateTimer, 1000);
+<script>
+/* Sheet ID hoort in Apps Script, niet in HTML — alleen ter referentie:
+   const SHEET_ID = '1reStr_8aqpBteTrG2T6XOaRzSfsc11u1yCTjBbKITI0';
+*/
+(function(){
+  const WEBHOOK_DEFAULT = "https://script.google.com/macros/s/AKfycbw17yVcx_OCuDyrZcZ1N9ctVC9y2YP9ZjrWhK94SDHMdILcnnnuMLW5oHXq1i3j9QeY7g/exec";
+
+  const $ = s => document.querySelector(s);
+  const webhookEl = $('#webhook');
+  const projectEl = $('#project');
+  const secretEl  = $('#secret');
+  const noteEl    = $('#note');
+  const display   = $('#display');
+  const startBtn  = $('#startBtn');
+  const stopBtn   = $('#stopBtn');
+  const statusEl  = $('#status');
+
+  const LS = { webhook:'tt_webhook', project:'tt_project', secret:'tt_secret', pending:'tt_pending', running:'tt_running' };
+  let startTS = null, timerId = null;
+
+  // Prefill + restore
+  webhookEl.value = localStorage.getItem(LS.webhook) || WEBHOOK_DEFAULT;
+  projectEl.value = localStorage.getItem(LS.project) || "Airbnb";
+  secretEl.value  = localStorage.getItem(LS.secret)  || "";
+  webhookEl.addEventListener('change', ()=>localStorage.setItem(LS.webhook, webhookEl.value.trim()));
+  projectEl.addEventListener('change', ()=>localStorage.setItem(LS.project, projectEl.value));
+  secretEl .addEventListener('change', ()=>localStorage.setItem(LS.secret,  secretEl.value.trim()));
+
+  // Herstel lopende timer
+  const running = JSON.parse(localStorage.getItem(LS.running) || 'null');
+  if(running){
+    startTS = running.startTS; projectEl.value = running.project || projectEl.value; noteEl.value = running.note || "";
+    startBtn.disabled = true; stopBtn.disabled = false;
+    timerId = setInterval(tick, 1000); tick();
+    statusEl.textContent = 'Lopende timer hersteld.';
+  }
+
+  function saveRunning(){
+    if(startTS){ localStorage.setItem(LS.running, JSON.stringify({startTS, project: projectEl.value, note: noteEl.value})); }
+    else { localStorage.removeItem(LS.running); }
+  }
+
+  function fmt(ms){ const s=Math.floor(ms/1000),h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor((s%3600)/60)).padStart(2,'0'),x=String(s%60).padStart(2,'0'); return `${h}:${m}:${x}`; }
+  function tick(){ if(startTS) display.textContent = fmt(Date.now()-startTS); }
+
+  // Offline queue
+  function queue(payload){
+    const q = JSON.parse(localStorage.getItem(LS.pending) || '[]');
+    q.push(payload);
+    localStorage.setItem(LS.pending, JSON.stringify(q));
+  }
+  async function flushQueue(){
+    const base = (webhookEl.value || "").trim();
+    if(!base) return;
+    const key = (secretEl.value || "").trim();
+    const url = key ? (base + (base.includes('?')?'&':'?') + 'key=' + encodeURIComponent(key)) : base;
+
+    const q = JSON.parse(localStorage.getItem(LS.pending) || '[]');
+    if(!q.length) return;
+
+    for(let i=0;i<q.length;i++){
+      try{
+        // text/plain → voorkomt CORS preflight; Apps Script leest JSON alsnog uit e.postData.contents
+        const r = await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(q[i])});
+        if(!r.ok) throw new Error('HTTP '+r.status);
+      }catch(e){
+        statusEl.innerHTML = `<span class="err">Nog ${q.length-i} logs in wachtrij (offline of URL fout?).</span>`;
+        localStorage.setItem(LS.pending, JSON.stringify(q.slice(i)));
+        return;
+      }
     }
+    localStorage.removeItem(LS.pending);
+    statusEl.innerHTML = '<span class="ok">Alle wachtrij-logs gesynchroniseerd.</span>';
+  }
 
-    function updateTimer() {
-      if (!startTime) return;
-      const diff = new Date() - startTime;
-      const hrs = String(Math.floor(diff / 3600000)).padStart(2, "0");
-      const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
-      const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-      document.getElementById("timer").innerText = `${hrs}:${mins}:${secs}`;
+  // Knoppen
+  startBtn.addEventListener('click', ()=>{
+    const base = (webhookEl.value || "").trim();
+    if(!base){ statusEl.innerHTML = '<span class="err">Plak eerst je Webhook URL.</span>'; return; }
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(base)){
+      statusEl.innerHTML = '<span class="err">Gebruik de publieke /macros/s/.../exec URL (geen /u/1/ of /a/.../).</span>';
+      return;
     }
+    startTS = Date.now(); saveRunning();
+    startBtn.disabled = true; stopBtn.disabled = false;
+    timerId = setInterval(tick, 1000); tick();
+    statusEl.textContent = 'Timer loopt…';
+  });
 
-    function stopTimer() {
-      if (!startTime) return;
-      clearInterval(timerInterval);
-      const endTime = new Date();
-      const durationMin = Math.round((endTime - startTime) / 60000);
+  stopBtn.addEventListener('click', async ()=>{
+    if(!startTS) return;
+    const endTS = Date.now();
+    const payload = {
+      start:new Date(startTS).toISOString(),
+      end:new Date(endTS).toISOString(),
+      duration_min: Math.max(1, Math.round((endTS - startTS)/60000)),
+      project: projectEl.value,
+      note: noteEl.value,
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
 
-      const payload = {
-        start: startTime.toISOString(),
-        end: endTime.toISOString(),
-        duration_min: durationMin,
-        project: document.getElementById("project").value,
-        note: document.getElementById("note").value,
-        tz: Intl.DateTimeFormat().resolvedOptions().timeZone
-      };
+    startTS = null; clearInterval(timerId); display.textContent='00:00:00';
+    startBtn.disabled = false; stopBtn.disabled = true; saveRunning();
 
-      fetch(WEBHOOK_URL, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" }
-      })
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("status").innerText = "✅ Gelogd!";
-        })
-        .catch(err => {
-          document.getElementById("status").innerText = "⚠️ Fout bij loggen";
-          console.error(err);
-        });
+    queue(payload);
+    try{ await flushQueue(); statusEl.innerHTML = `<span class="ok">Gelogd: ${payload.duration_min} min (${payload.project}).</span>`; noteEl.value=''; }
+    catch(e){ statusEl.innerHTML = '<span class="err">Offline opgeslagen. Probeert later opnieuw.</span>'; }
+  });
 
-      startTime = null;
-      document.getElementById("timer").innerText = "00:00:00";
-    }
-  </script>
+  // auto flush bij load en bij wijzigen url/secret
+  setTimeout(flushQueue, 400);
+  webhookEl.addEventListener('change', flushQueue);
+  secretEl .addEventListener('change', flushQueue);
+})();
+</script>
 </body>
 </html>
